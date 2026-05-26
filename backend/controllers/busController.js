@@ -1,10 +1,15 @@
 import Route from "../models/routeSchema.js";
 import { findJourney } from "../algorithm/bfs.js";
-import Stop from "../models/StopSchema";
+import Stop from "../models/StopSchema.js";
+import { translateStop } from "../algorithm/translator.js";
+import { recommendFirstBus } from "../algorithm/nextBus.js";
+import { estimateTime } from "../algorithm/timeEstimator.js";
 
 export const searchJourneys = async (req, res) => {
     try {
-        const { from, to } = req.query;
+        let { from, to } = req.query;
+        from = translateStop(from);
+        to = translateStop(to);
         if (!from || !to) {
             return res.status(400).json({
                 success: false,
@@ -20,9 +25,17 @@ export const searchJourneys = async (req, res) => {
         }
 
         const routes = await Route.find({});
-        const result = findJourney(from, to, routes);
+        const journeys = findJourney(from, to, routes);
 
-        const noResult = result.direct.length === 0 && result.oneChange.length === 0 && result.twoChange.length === 0;
+        const allJourneys = [
+            ...journeys.direct,
+            ...journeys.oneChange,
+            ...journeys.twoChange
+        ];
+
+        const recommendations = recommendFirstBus(allJourneys, routes)
+
+        const noResult = recommendations.length === 0;
 
         if (noResult) {
             return res.status(404).json({
@@ -31,11 +44,29 @@ export const searchJourneys = async (req, res) => {
             })
         }
 
+        const response = {
+            direct: journeys.direct.map(j => ({
+                path: j,
+                estimatedTime: estimateTime(j, routes),
+                type: 'Direct'
+            })),
+            oneChange: journeys.oneChange.map(j => ({
+                path: j,
+                estimatedTime: estimateTime(j, routes),
+                type: '1 Change'
+            })),
+            twoChange: journeys.twoChange.map(j => ({
+                path: j,
+                estimatedTime: estimateTime(j, routes),
+                type: '2 Changes'
+            })),
+            bestOption: recommendations[0] // earliest bus
+        };
+
         return res.status(200).json({
             success: true,
-            data: result,
-            message: 'Routes found successfully'
-        })
+            response,
+        });
 
     } catch (error) {
         console.log(error);
@@ -116,3 +147,30 @@ export const addStop = async (req, res) => {
         })
     }
 }
+
+
+
+export const getRouteTimings = async (req, res) => {
+    try {
+        const { routeNumber } = req.params;
+
+        const route = await Route.findOne({ routeNumber });
+        if (!route) {
+            return res.status(404).json({
+                error: 'Route not found'
+            });
+        }
+
+        res.status(200).json({
+            routeNumber: route.routeNumber,
+            routeName: route.routeName,
+            firstBus: route.schedule.firstBus,
+            lastBus: route.schedule.lastBus,
+            frequency: `Every ${route.schedule.frequency} minutes`,
+            stops: route.stops
+        });
+
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+};
