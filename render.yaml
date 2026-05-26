@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: bus-finder
+    env: node
+    buildCommand: npm run install-all && npm run build
+    startCommand: npm start
+    envVars:
+      - key: MONGODB_URI
+        value: mongodb+srv://ncoder835_db_user:rohan1234@cluster0.yauzcxs.mongodb.net/
+      - key: PORT
+        value: 10000

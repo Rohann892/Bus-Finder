@@ -35,24 +35,23 @@ const JourneyMap = ({ path }) => {
   useEffect(() => {
     if (!path || path.length === 0) return;
 
-    // Identify major stops: start, transfers, and end
-    const majorSteps = [];
-    path.forEach((step, idx) => {
-      const isStart = idx === 0;
-      const isEnd = idx === path.length - 1;
-      const isTransfer = idx > 0 && path[idx].bus !== path[idx - 1].bus;
-
-      if (isStart || isEnd || isTransfer) {
-        majorSteps.push({
-          stop: step.stop,
-          bus: step.bus,
-          isStart,
-          isEnd,
-          isTransfer,
-          dbCoords: step.coordinates
-        });
+    // Identify major stops: ONLY start (source) and end (destination)
+    const majorSteps = [
+      {
+        stop: path[0].stop,
+        bus: path[0].bus,
+        isStart: true,
+        isEnd: false,
+        dbCoords: path[0].coordinates
+      },
+      {
+        stop: path[path.length - 1].stop,
+        bus: path[path.length - 1].bus,
+        isStart: false,
+        isEnd: true,
+        dbCoords: path[path.length - 1].coordinates
       }
-    });
+    ];
 
     let active = true;
     const resolveCoordinates = async () => {
