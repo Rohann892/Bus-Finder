@@ -39,7 +39,6 @@ function countStopsBetween(stops, from, to) {
 function groupByBus(path) {
     const legs = [];
     let currentBus = null;
-    let legStart = null;
 
     for (const step of path) {
         if (step.bus !== currentBus) {
@@ -49,11 +48,10 @@ function groupByBus(path) {
             }
             legs.push({
                 bus: step.bus,
-                fromStop: legStart || step.stop,
+                fromStop: step.stop,
                 isTransfer: false
             });
             currentBus = step.bus;
-            legStart = step.stop;
         }
     }
 

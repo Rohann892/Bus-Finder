@@ -35,10 +35,10 @@ function findJourney(source, destination, routes) {
         const dIdx = r1.stops.indexOf(destination);
 
         if (sIdx !== -1 && dIdx !== -1 && sIdx < dIdx) {
-            const path = [
-                { bus: r1.routeNumber, stop: source },
-                { bus: r1.routeNumber, stop: destination }
-            ];
+            const path = [];
+            for (let k = sIdx; k <= dIdx; k++) {
+                path.push({ bus: r1.routeNumber, stop: r1.stops[k] });
+            }
             const key = serializePath(path);
             if (!addedDirect.has(key)) {
                 addedDirect.add(key);
@@ -66,12 +66,17 @@ function findJourney(source, destination, routes) {
                 const dIdx = r2.stops.indexOf(destination);
 
                 if (t1Idx !== -1 && dIdx !== -1 && t1Idx < dIdx) {
-                    const path = [
-                        { bus: r1.routeNumber, stop: source },
-                        { bus: r1.routeNumber, stop: t1 },
-                        { bus: r2.routeNumber, stop: t1 },
-                        { bus: r2.routeNumber, stop: destination }
-                    ];
+                    const path = [];
+                    // Add all stops for first leg (source -> t1)
+                    const t1IdxInR1 = r1.stops.indexOf(t1);
+                    for (let k = sIdx; k <= t1IdxInR1; k++) {
+                        path.push({ bus: r1.routeNumber, stop: r1.stops[k] });
+                    }
+                    // Add all stops for second leg (t1 -> destination)
+                    for (let k = t1Idx + 1; k <= dIdx; k++) {
+                        path.push({ bus: r2.routeNumber, stop: r2.stops[k] });
+                    }
+
                     const key = serializePath(path);
                     if (!addedOneChange.has(key)) {
                         addedOneChange.add(key);
@@ -114,14 +119,21 @@ function findJourney(source, destination, routes) {
                         const dIdx = r3.stops.indexOf(destination);
 
                         if (t2IdxInR3 !== -1 && dIdx !== -1 && t2IdxInR3 < dIdx) {
-                            const path = [
-                                { bus: r1.routeNumber, stop: source },
-                                { bus: r1.routeNumber, stop: t1 },
-                                { bus: r2.routeNumber, stop: t1 },
-                                { bus: r2.routeNumber, stop: t2 },
-                                { bus: r3.routeNumber, stop: t2 },
-                                { bus: r3.routeNumber, stop: destination }
-                            ];
+                            const path = [];
+                            // Add first leg stops
+                            const t1IdxInR1 = r1.stops.indexOf(t1);
+                            for (let k = sIdx; k <= t1IdxInR1; k++) {
+                                path.push({ bus: r1.routeNumber, stop: r1.stops[k] });
+                            }
+                            // Add second leg stops
+                            for (let k = t1IdxInR2 + 1; k <= j; k++) {
+                                path.push({ bus: r2.routeNumber, stop: r2.stops[k] });
+                            }
+                            // Add third leg stops
+                            for (let k = t2IdxInR3 + 1; k <= dIdx; k++) {
+                                path.push({ bus: r3.routeNumber, stop: r3.stops[k] });
+                            }
+
                             const key = serializePath(path);
                             if (!addedTwoChange.has(key)) {
                                 addedTwoChange.add(key);
