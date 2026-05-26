@@ -1,3 +1,5 @@
+import { estimateTime } from "./timeEstimator.js";
+
 // Find next available bus for a route
 function getNextBus(routeNumber, routes) {
     const route = routes.find(r => r.routeNumber === routeNumber);
@@ -48,18 +50,19 @@ function recommendFirstBus(journeyOptions, routes) {
 
         const firstBusNumber = journey[0].bus;
         const nextBusInfo = getNextBus(firstBusNumber, routes);
+        const travelInfo = estimateTime(journey, routes);
 
         recommendations.push({
             journey,
             firstBus: firstBusNumber,
             nextBusInfo,
-            // Sort by wait time
-            waitMinutes: nextBusInfo?.waitMinutes || 999
+            // Calculate total time = wait time + travel time
+            totalMinutes: (nextBusInfo?.waitMinutes || 999) + (travelInfo?.minutes || 0)
         });
     }
 
-    // Sort by earliest available bus
-    recommendations.sort((a, b) => a.waitMinutes - b.waitMinutes);
+    // Sort by total estimated time (wait + travel)
+    recommendations.sort((a, b) => a.totalMinutes - b.totalMinutes);
 
     return recommendations;
 }

@@ -40,7 +40,7 @@ const LegIntermediates = ({ intermediates }) => {
   );
 };
 
-const JourneyTimeline = ({ journey }) => {
+const JourneyTimeline = ({ journey, isSelected, onSelect }) => {
   const { path, estimatedTime, type } = journey;
 
   // Group steps by bus legs
@@ -104,7 +104,22 @@ const JourneyTimeline = ({ journey }) => {
   };
 
   return (
-    <div className="bg-white/85 border border-slate-200/80 rounded-3xl shadow-sm hover:shadow-md transition-all duration-300 p-6 mb-4 flex flex-col gap-4 animate-slide-in">
+    <div 
+      onClick={onSelect}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          onSelect();
+        }
+      }}
+      tabIndex={0}
+      role="button"
+      className={`bg-white/85 border rounded-3xl p-6 mb-4 flex flex-col gap-4 animate-slide-in cursor-pointer transition-all duration-300 ${
+        isSelected
+          ? 'border-emerald-500 shadow-md ring-2 ring-emerald-500/10 bg-gradient-to-br from-white to-emerald-50/20'
+          : 'border-slate-200/80 shadow-sm hover:shadow-md hover:border-slate-300'
+      }`}
+    >
       <div className="flex justify-between items-center">
         <span className={`inline-flex items-center px-3 py-1 rounded-full text-[0.75rem] font-bold uppercase tracking-wider ${getPillColor(type)}`}>
           {type}

@@ -27,13 +27,40 @@ export const searchJourneys = async (req, res) => {
         const routes = await Route.find({});
         const journeys = findJourney(from, to, routes);
 
+        // Collect all unique stop names to fetch their coordinates
+        const stopNamesSet = new Set();
+        const collectStops = (path) => path.forEach(step => stopNamesSet.add(step.stop));
+        journeys.direct.forEach(collectStops);
+        journeys.oneChange.forEach(collectStops);
+        journeys.twoChange.forEach(collectStops);
+
+        // Query coordinates for all stops
+        const stopsData = await Stop.find({ name: { $in: Array.from(stopNamesSet) } });
+        const coordsMap = {};
+        stopsData.forEach(stop => {
+            if (stop.location && stop.location.coordinates) {
+                // GeoJSON: [longitude, latitude] -> Leaflet: [latitude, longitude]
+                coordsMap[stop.name] = [stop.location.coordinates[1], stop.location.coordinates[0]];
+            }
+        });
+
+        // Helper to enrich path steps with coordinates
+        const enrichPath = (path) => path.map(step => ({
+            ...step,
+            coordinates: coordsMap[step.stop] || null
+        }));
+
+        const enrichedDirect = journeys.direct.map(enrichPath);
+        const enrichedOneChange = journeys.oneChange.map(enrichPath);
+        const enrichedTwoChange = journeys.twoChange.map(enrichPath);
+
         const allJourneys = [
-            ...journeys.direct,
-            ...journeys.oneChange,
-            ...journeys.twoChange
+            ...enrichedDirect,
+            ...enrichedOneChange,
+            ...enrichedTwoChange
         ];
 
-        const recommendations = recommendFirstBus(allJourneys, routes)
+        const recommendations = recommendFirstBus(allJourneys, routes);
 
         const noResult = recommendations.length === 0;
 
@@ -41,26 +68,36 @@ export const searchJourneys = async (req, res) => {
             return res.status(404).json({
                 success: false,
                 message: 'No routes found between ' + from + ' and ' + to
-            })
+            });
         }
 
+        // Map and sort results by travel duration (shortest path first)
+        const directMapped = enrichedDirect.map(j => ({
+            path: j,
+            estimatedTime: estimateTime(j, routes),
+            type: 'Direct'
+        }));
+        directMapped.sort((a, b) => a.estimatedTime.minutes - b.estimatedTime.minutes);
+
+        const oneChangeMapped = enrichedOneChange.map(j => ({
+            path: j,
+            estimatedTime: estimateTime(j, routes),
+            type: '1 Change'
+        }));
+        oneChangeMapped.sort((a, b) => a.estimatedTime.minutes - b.estimatedTime.minutes);
+
+        const twoChangeMapped = enrichedTwoChange.map(j => ({
+            path: j,
+            estimatedTime: estimateTime(j, routes),
+            type: '2 Changes'
+        }));
+        twoChangeMapped.sort((a, b) => a.estimatedTime.minutes - b.estimatedTime.minutes);
+
         const response = {
-            direct: journeys.direct.map(j => ({
-                path: j,
-                estimatedTime: estimateTime(j, routes),
-                type: 'Direct'
-            })),
-            oneChange: journeys.oneChange.map(j => ({
-                path: j,
-                estimatedTime: estimateTime(j, routes),
-                type: '1 Change'
-            })),
-            twoChange: journeys.twoChange.map(j => ({
-                path: j,
-                estimatedTime: estimateTime(j, routes),
-                type: '2 Changes'
-            })),
-            bestOption: recommendations[0] // earliest bus
+            direct: directMapped,
+            oneChange: oneChangeMapped,
+            twoChange: twoChangeMapped,
+            bestOption: recommendations[0] // best route (least total travel + wait time)
         };
 
         return res.status(200).json({

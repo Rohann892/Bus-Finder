@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
+import axios from 'axios';
 import Header from './components/Header';
 import StopInput from './components/StopInput';
 import BestOptionBanner from './components/BestOptionBanner';
 import TabsContainer from './components/TabsContainer';
 import JourneyTimeline from './components/JourneyTimeline';
 import LoadingSkeleton from './components/LoadingSkeleton';
+import JourneyMap from './components/JourneyMap';
 
 function App() {
   const [stops, setStops] = useState([]);
@@ -13,15 +15,15 @@ function App() {
   const [loading, setLoading] = useState(false);
   const [results, setResults] = useState(null);
   const [activeTab, setActiveTab] = useState('all');
+  const [selectedJourney, setSelectedJourney] = useState(null);
   const [error, setError] = useState('');
 
   // Fetch stops list on mount
   useEffect(() => {
     const fetchStops = async () => {
       try {
-        const response = await fetch('/api/bus/allStops');
-        if (!response.ok) throw new Error('Failed to load stops');
-        const data = await response.json();
+        const response = await axios.get('/api/bus/allStops');
+        const data = response.data;
         if (data.success && Array.isArray(data.data)) {
           setStops(data.data);
         }
@@ -32,6 +34,41 @@ function App() {
     };
     fetchStops();
   }, []);
+
+  // Update selected journey when active tab or search results change
+  useEffect(() => {
+    if (!results) {
+      setSelectedJourney(null);
+      return;
+    }
+
+    let list = [];
+    if (activeTab === 'all') {
+      list = [
+        ...(results.direct || []),
+        ...(results.oneChange || []),
+        ...(results.twoChange || [])
+      ];
+    } else if (activeTab === 'direct') {
+      list = results.direct || [];
+    } else if (activeTab === 'oneChange') {
+      list = results.oneChange || [];
+    } else if (activeTab === 'twoChange') {
+      list = results.twoChange || [];
+    }
+
+    if (list.length > 0) {
+      // Keep current selection if it is in the list, otherwise select the first item
+      const exists = list.some(
+        j => JSON.stringify(j.path) === JSON.stringify(selectedJourney)
+      );
+      if (!exists) {
+        setSelectedJourney(list[0].path);
+      }
+    } else {
+      setSelectedJourney(null);
+    }
+  }, [activeTab, results]);
 
   const handleSwap = () => {
     const temp = fromStop;
@@ -53,20 +90,28 @@ function App() {
     setLoading(true);
     setError('');
     setResults(null);
+    setSelectedJourney(null);
 
     try {
-      const response = await fetch(
-        `/api/bus/search?from=${encodeURIComponent(fromStop.trim())}&to=${encodeURIComponent(toStop.trim())}`
-      );
-      const data = await response.json();
+      const response = await axios.get('/api/bus/search', {
+        params: {
+          from: fromStop.trim(),
+          to: toStop.trim(),
+        },
+      });
+      const data = response.data;
 
-      if (!response.ok || !data.success) {
+      if (!data.success) {
         throw new Error(data.message || 'No route paths could be resolved.');
       }
 
       setResults(data.response);
+      if (data.response.bestOption?.journey) {
+        setSelectedJourney(data.response.bestOption.journey);
+      }
     } catch (err) {
-      setError(err.message || 'An error occurred while searching connecting routes.');
+      const errMsg = err.response?.data?.message || err.message || 'An error occurred while searching connecting routes.';
+      setError(errMsg);
     } finally {
       setLoading(false);
     }
@@ -145,22 +190,57 @@ function App() {
 
       {results && !loading && (
         <div className="flex flex-col gap-5">
-          <BestOptionBanner bestOption={results.bestOption} fromStop={fromStop} />
+          <BestOptionBanner 
+            bestOption={results.bestOption} 
+            fromStop={fromStop}
+            isSelected={JSON.stringify(results.bestOption?.journey) === JSON.stringify(selectedJourney)}
+            onSelect={() => results.bestOption?.journey && setSelectedJourney(results.bestOption.journey)}
+          />
+
+          {selectedJourney && <JourneyMap path={selectedJourney} />}
 
           <TabsContainer activeTab={activeTab} setActiveTab={setActiveTab} results={results} />
 
           <div className="flex flex-col gap-2">
             {activeTab === 'all' && (
               <>
-                {results.direct?.map((j, i) => <JourneyTimeline key={`d-${i}`} journey={j} />)}
-                {results.oneChange?.map((j, i) => <JourneyTimeline key={`o-${i}`} journey={j} />)}
-                {results.twoChange?.map((j, i) => <JourneyTimeline key={`t-${i}`} journey={j} />)}
+                {results.direct?.map((j, i) => (
+                  <JourneyTimeline 
+                    key={`d-${i}`} 
+                    journey={j} 
+                    isSelected={JSON.stringify(j.path) === JSON.stringify(selectedJourney)}
+                    onSelect={() => setSelectedJourney(j.path)}
+                  />
+                ))}
+                {results.oneChange?.map((j, i) => (
+                  <JourneyTimeline 
+                    key={`o-${i}`} 
+                    journey={j} 
+                    isSelected={JSON.stringify(j.path) === JSON.stringify(selectedJourney)}
+                    onSelect={() => setSelectedJourney(j.path)}
+                  />
+                ))}
+                {results.twoChange?.map((j, i) => (
+                  <JourneyTimeline 
+                    key={`t-${i}`} 
+                    journey={j} 
+                    isSelected={JSON.stringify(j.path) === JSON.stringify(selectedJourney)}
+                    onSelect={() => setSelectedJourney(j.path)}
+                  />
+                ))}
               </>
             )}
 
             {activeTab === 'direct' && (
               results.direct?.length > 0 ? (
-                results.direct.map((j, i) => <JourneyTimeline key={`d-${i}`} journey={j} />)
+                results.direct.map((j, i) => (
+                  <JourneyTimeline 
+                    key={`d-${i}`} 
+                    journey={j} 
+                    isSelected={JSON.stringify(j.path) === JSON.stringify(selectedJourney)}
+                    onSelect={() => setSelectedJourney(j.path)}
+                  />
+                ))
               ) : (
                 <p className="text-slate-500 text-center py-6 font-sans">No direct routes found.</p>
               )
@@ -168,7 +248,14 @@ function App() {
 
             {activeTab === 'oneChange' && (
               results.oneChange?.length > 0 ? (
-                results.oneChange.map((j, i) => <JourneyTimeline key={`o-${i}`} journey={j} />)
+                results.oneChange.map((j, i) => (
+                  <JourneyTimeline 
+                    key={`o-${i}`} 
+                    journey={j} 
+                    isSelected={JSON.stringify(j.path) === JSON.stringify(selectedJourney)}
+                    onSelect={() => setSelectedJourney(j.path)}
+                  />
+                ))
               ) : (
                 <p className="text-slate-500 text-center py-6 font-sans">No 1-change routes found.</p>
               )
@@ -176,7 +263,14 @@ function App() {
 
             {activeTab === 'twoChange' && (
               results.twoChange?.length > 0 ? (
-                results.twoChange.map((j, i) => <JourneyTimeline key={`t-${i}`} journey={j} />)
+                results.twoChange.map((j, i) => (
+                  <JourneyTimeline 
+                    key={`t-${i}`} 
+                    journey={j} 
+                    isSelected={JSON.stringify(j.path) === JSON.stringify(selectedJourney)}
+                    onSelect={() => setSelectedJourney(j.path)}
+                  />
+                ))
               ) : (
                 <p className="text-slate-500 text-center py-6 font-sans">No 2-change routes found.</p>
               )
