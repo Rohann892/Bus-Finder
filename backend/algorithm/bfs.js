@@ -50,7 +50,7 @@ function findJourney(source, destination, routes) {
         if (sIdx !== -1 && dIdx !== -1 && sIdx < dIdx) {
             const path = [];
             for (let k = sIdx; k <= dIdx; k++) {
-                path.push({ bus: r1.routeNumber, stop: r1.stops[k] });
+                path.push({ bus: r1.routeNumber, mode: r1.mode, stop: r1.stops[k] });
             }
             if (hasDuplicates(path)) continue;
             
@@ -85,11 +85,11 @@ function findJourney(source, destination, routes) {
                     // Add all stops for first leg (source -> t1)
                     const t1IdxInR1 = r1.stops.indexOf(t1);
                     for (let k = sIdx; k <= t1IdxInR1; k++) {
-                        path.push({ bus: r1.routeNumber, stop: r1.stops[k] });
+                        path.push({ bus: r1.routeNumber, mode: r1.mode, stop: r1.stops[k] });
                     }
                     // Add all stops for second leg (t1 -> destination)
                     for (let k = t1Idx; k <= dIdx; k++) {
-                        path.push({ bus: r2.routeNumber, stop: r2.stops[k] });
+                        path.push({ bus: r2.routeNumber, mode: r2.mode, stop: r2.stops[k] });
                     }
 
                     if (hasDuplicates(path)) continue;
@@ -140,15 +140,15 @@ function findJourney(source, destination, routes) {
                             // Add first leg stops
                             const t1IdxInR1 = r1.stops.indexOf(t1);
                             for (let k = sIdx; k <= t1IdxInR1; k++) {
-                                path.push({ bus: r1.routeNumber, stop: r1.stops[k] });
+                                path.push({ bus: r1.routeNumber, mode: r1.mode, stop: r1.stops[k] });
                             }
                             // Add second leg stops
                             for (let k = t1IdxInR2; k <= j; k++) {
-                                path.push({ bus: r2.routeNumber, stop: r2.stops[k] });
+                                path.push({ bus: r2.routeNumber, mode: r2.mode, stop: r2.stops[k] });
                             }
                             // Add third leg stops
                             for (let k = t2IdxInR3; k <= dIdx; k++) {
-                                path.push({ bus: r3.routeNumber, stop: r3.stops[k] });
+                                path.push({ bus: r3.routeNumber, mode: r3.mode, stop: r3.stops[k] });
                             }
 
                             if (hasDuplicates(path)) continue;

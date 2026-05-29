@@ -4,6 +4,7 @@ import Stop from "../models/StopSchema.js";
 import { translateStop } from "../algorithm/translator.js";
 import { recommendFirstBus } from "../algorithm/nextBus.js";
 import { estimateTime } from "../algorithm/timeEstimator.js";
+import { generateTransferEdges } from "../algorithm/transferEdges.js";
 
 export const searchJourneys = async (req, res) => {
     try {
@@ -25,7 +26,13 @@ export const searchJourneys = async (req, res) => {
         }
 
         const routes = await Route.find({});
-        const journeys = findJourney(from, to, routes);
+
+        // Fetch all stops for transfer-edge generation
+        const allStops = await Stop.find({});
+        const transferRoutes = generateTransferEdges(allStops);
+        const mergedRoutes = [...routes, ...transferRoutes];
+
+        const journeys = findJourney(from, to, mergedRoutes);
 
         // Collect all unique stop names to fetch their coordinates
         const stopNamesSet = new Set();
@@ -44,9 +51,10 @@ export const searchJourneys = async (req, res) => {
             }
         });
 
-        // Helper to enrich path steps with coordinates
+        // Helper to enrich path steps with coordinates and mode
         const enrichPath = (path) => path.map(step => ({
             ...step,
+            mode: step.mode || 'bus',
             coordinates: coordsMap[step.stop] || null
         }));
 

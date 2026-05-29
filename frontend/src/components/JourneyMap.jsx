@@ -25,6 +25,40 @@ async function geocodeStop(stopName) {
   return null;
 }
 
+// Mode → colour mapping for map polylines / markers
+const MODE_COLORS = {
+  bus:   '#10b981', // emerald-500
+  metro: '#8b5cf6', // violet-500
+  train: '#3b82f6', // blue-500
+  walk:  '#f59e0b', // amber-500
+};
+
+const MODE_LABELS = {
+  bus:   'Bus',
+  metro: 'Metro',
+  train: 'Train',
+  walk:  'Walk',
+};
+
+function getModeColor(mode) {
+  return MODE_COLORS[mode] || MODE_COLORS.bus;
+}
+
+// ── Map Legend ────────────────────────────────────────────────────────────────
+const MapLegend = ({ modes }) => {
+  if (!modes || modes.length === 0) return null;
+  return (
+    <div className="absolute bottom-3 left-3 z-[9999] bg-white/90 backdrop-blur-sm border border-slate-200 rounded-xl px-3 py-2 flex flex-col gap-1 shadow-md pointer-events-none">
+      {modes.map(m => (
+        <div key={m} className="flex items-center gap-2 text-[0.75rem] font-sans font-medium text-slate-700">
+          <span className="inline-block w-5 h-1.5 rounded-full" style={{ backgroundColor: getModeColor(m) }} />
+          {MODE_LABELS[m] || m}
+        </div>
+      ))}
+    </div>
+  );
+};
+
 const JourneyMap = ({ path }) => {
   const mapContainerRef = useRef(null);
   const mapRef = useRef(null);
@@ -35,23 +69,23 @@ const JourneyMap = ({ path }) => {
   useEffect(() => {
     if (!path || path.length === 0) return;
 
-    // Identify major stops: ONLY start (source) and end (destination)
-    const majorSteps = [
-      {
-        stop: path[0].stop,
-        bus: path[0].bus,
-        isStart: true,
-        isEnd: false,
-        dbCoords: path[0].coordinates
-      },
-      {
-        stop: path[path.length - 1].stop,
-        bus: path[path.length - 1].bus,
-        isStart: false,
-        isEnd: true,
-        dbCoords: path[path.length - 1].coordinates
+    // Collect key waypoints: source, transfer points (bus changes), destination
+    const keyIndices = new Set([0, path.length - 1]);
+    for (let i = 1; i < path.length; i++) {
+      if (path[i].bus !== path[i - 1].bus) {
+        keyIndices.add(i - 1); // alight
+        keyIndices.add(i);     // board
       }
-    ];
+    }
+
+    const majorSteps = [...keyIndices].sort((a, b) => a - b).map(idx => ({
+      stop:     path[idx].stop,
+      bus:      path[idx].bus,
+      mode:     path[idx].mode || 'bus',
+      isStart:  idx === 0,
+      isEnd:    idx === path.length - 1,
+      dbCoords: path[idx].coordinates,
+    }));
 
     let active = true;
     const resolveCoordinates = async () => {
@@ -59,10 +93,7 @@ const JourneyMap = ({ path }) => {
       const resolved = await Promise.all(
         majorSteps.map(async (step) => {
           let coords = await geocodeStop(step.stop);
-          // Fallback to database coordinates if geocoding fails
-          if (!coords) {
-            coords = step.dbCoords;
-          }
+          if (!coords) coords = step.dbCoords;
           return { ...step, coordinates: coords };
         })
       );
@@ -75,86 +106,78 @@ const JourneyMap = ({ path }) => {
     };
 
     resolveCoordinates();
-
-    return () => {
-      active = false;
-    };
+    return () => { active = false; };
   }, [path]);
 
   // Render Leaflet Map
   useEffect(() => {
     if (!mapContainerRef.current || mapStops.length === 0) return;
 
-    // Initialize the Leaflet map
     const map = L.map(mapContainerRef.current, {
       zoomControl: true,
       scrollWheelZoom: true,
     });
     mapRef.current = map;
 
-    // Add Voyager map tile layer
+    // Voyager tile layer
     L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
       attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
       subdomains: 'abcd',
       maxZoom: 20,
     }).addTo(map);
 
-    // Draw polylines (colored routes) connecting the resolved stops in order
-    const colors = ['#10b981', '#14b8a6', '#06b6d4', '#3b82f6']; // Emerald, Teal, Cyan, Blue
     const allCoords = [];
 
+    // Draw polyline segments coloured by mode
     for (let i = 0; i < mapStops.length - 1; i++) {
       const current = mapStops[i];
-      const next = mapStops[i + 1];
-      const coords = [current.coordinates, next.coordinates];
-      allCoords.push(...coords);
+      const next    = mapStops[i + 1];
+      const segCoords = [current.coordinates, next.coordinates];
+      allCoords.push(...segCoords);
 
-      const color = colors[i % colors.length];
-      const polyline = L.polyline(coords, {
-        color: color,
-        weight: 6,
-        opacity: 0.85,
+      const color = getModeColor(current.mode);
+      const isWalk = current.mode === 'walk';
+
+      const polyline = L.polyline(segCoords, {
+        color,
+        weight: isWalk ? 4 : 6,
+        opacity: isWalk ? 0.65 : 0.88,
+        dashArray: isWalk ? '8, 8' : null,
         lineJoin: 'round',
       }).addTo(map);
 
-      polyline.bindPopup(`<strong>Bus ${current.bus}</strong>`);
+      polyline.bindPopup(
+        `<strong>${MODE_LABELS[current.mode] || 'Bus'} ${current.bus}</strong><br/>${current.stop} → ${next.stop}`
+      );
     }
 
-    // Draw Markers ONLY for Source and Destination stops
+    // Markers for source, transfers, and destination
     mapStops.forEach((step) => {
-      // Only draw start (source) and end (destination) markers
-      if (!step.isStart && !step.isEnd) {
-        return;
-      }
-
-      let markerOptions = {};
+      const color = getModeColor(step.mode);
+      let markerColor = color;
       let popupContent = `<strong>${step.stop}</strong><br/>`;
 
       if (step.isStart) {
-        markerOptions = {
-          radius: 8,
-          fillColor: '#10b981', // Emerald
-          color: '#ffffff',
-          weight: 3,
-          opacity: 1,
-          fillOpacity: 0.95,
-        };
-        popupContent += `<span style="color:#047857; font-weight:bold;">Start Station</span><br/>Board Bus <strong>${step.bus}</strong>`;
+        markerColor = color;
+        popupContent += `<span style="color:${color}; font-weight:bold;">Start — ${MODE_LABELS[step.mode] || 'Bus'}</span><br/>Board <strong>${step.bus}</strong>`;
       } else if (step.isEnd) {
-        markerOptions = {
-          radius: 8,
-          fillColor: '#f59e0b', // Amber
-          color: '#ffffff',
-          weight: 3,
-          opacity: 1,
-          fillOpacity: 0.95,
-        };
+        markerColor = '#f59e0b';
         popupContent += `<span style="color:#b45309; font-weight:bold;">Destination</span><br/>Arrive here`;
+      } else {
+        // Transfer point
+        popupContent += `<span style="color:${color}; font-weight:bold;">Transfer → ${MODE_LABELS[step.mode] || 'Bus'}</span><br/>Board <strong>${step.bus}</strong>`;
       }
 
-      const marker = L.circleMarker(step.coordinates, markerOptions).addTo(map);
-      marker.bindPopup(popupContent);
+      const marker = L.circleMarker(step.coordinates, {
+        radius:      step.isStart || step.isEnd ? 9 : 7,
+        fillColor:   markerColor,
+        color:       '#ffffff',
+        weight:      3,
+        opacity:     1,
+        fillOpacity: 0.95,
+      }).addTo(map);
 
+      marker.bindPopup(popupContent);
       marker.bindTooltip(step.stop, {
         permanent: false,
         direction: 'top',
@@ -162,12 +185,10 @@ const JourneyMap = ({ path }) => {
       });
     });
 
-    // Auto-fit bounds
     if (allCoords.length > 0) {
       map.fitBounds(allCoords, { padding: [50, 50] });
     }
 
-    // Cleanup on unmount or mapStops change
     return () => {
       if (mapRef.current) {
         mapRef.current.remove();
@@ -175,6 +196,9 @@ const JourneyMap = ({ path }) => {
       }
     };
   }, [mapStops]);
+
+  // Unique modes used (for legend)
+  const modesInPath = [...new Set((path || []).map(s => s.mode || 'bus'))];
 
   return (
     <div className="w-full relative overflow-hidden bg-white/80 border border-slate-200/80 rounded-3xl p-3 shadow-sm hover:shadow-md transition-all duration-300 animate-slide-in mb-4">
@@ -192,10 +216,12 @@ const JourneyMap = ({ path }) => {
         </span>
       </div>
       <div className="relative w-full h-[320px]">
-        <div 
-          ref={mapContainerRef} 
-          className="w-full h-full rounded-2xl border border-slate-100 z-10" 
+        <div
+          ref={mapContainerRef}
+          className="w-full h-full rounded-2xl border border-slate-100 z-10"
         />
+        {/* Map Legend */}
+        <MapLegend modes={modesInPath} />
         {loadingGeocodes && (
           <div className="absolute inset-0 bg-white/70 backdrop-blur-xs z-20 flex items-center justify-center rounded-2xl">
             <div className="flex items-center gap-2 text-emerald-600 font-sans font-medium text-sm">

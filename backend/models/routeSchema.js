@@ -17,6 +17,11 @@ const routeSchema = new mongoose.Schema({
     stops: [String],
     schedule: ScheduleSchema,
     avgTimePerStop: Number,
+    mode: {
+        type: String,
+        enum: ['bus', 'metro', 'train'],
+        default: 'bus'
+    },
 })
 
 const Route = mongoose.model("Route", routeSchema);

@@ -15,6 +15,11 @@ const stopSchema = new mongoose.Schema({
             type: [Number],
             required: true
         }
+    },
+    mode: {
+        type: String,
+        enum: ['bus', 'metro', 'train'],
+        default: 'bus'
     }
 })
 
