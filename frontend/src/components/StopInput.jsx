@@ -78,7 +78,7 @@ const StopInput = ({ label, value, onChange, stops, placeholder, icon }) => {
     <div className="relative w-full" ref={containerRef} onKeyDown={handleKeyDown}>
       <input
         type="text"
-        className="w-full pl-12 pr-4 py-4 bg-white/80 border border-slate-200 rounded-2xl text-slate-800 placeholder-slate-400 font-sans outline-none transition-all focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10"
+        className="w-full pl-10 sm:pl-12 pr-4 py-3.5 sm:py-4 bg-white/80 border border-slate-200 rounded-xl sm:rounded-2xl text-slate-800 text-sm sm:text-base placeholder-slate-400 font-sans outline-none transition-all focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10"
         value={value}
         onChange={(e) => {
           onChange(e.target.value);
@@ -88,16 +88,16 @@ const StopInput = ({ label, value, onChange, stops, placeholder, icon }) => {
         onFocus={() => setIsOpen(true)}
         placeholder={placeholder}
       />
-      <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 transition-colors pointer-events-none focus-within:text-emerald-500">
+      <div className="absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 text-slate-400 transition-colors pointer-events-none focus-within:text-emerald-500">
         {icon}
       </div>
 
       {isOpen && suggestions.length > 0 && (
-        <ul className="absolute top-[calc(100%+8px)] left-0 right-0 bg-white border border-slate-200/80 rounded-2xl max-h-60 overflow-y-auto z-[1000] shadow-xl p-2 list-none m-0">
+        <ul className="absolute top-[calc(100%+6px)] sm:top-[calc(100%+8px)] left-0 right-0 bg-white border border-slate-200/80 rounded-xl sm:rounded-2xl max-h-52 sm:max-h-60 overflow-y-auto z-[1000] shadow-xl p-1.5 sm:p-2 list-none m-0">
           {suggestions.map((suggestion, idx) => (
             <li
               key={idx}
-              className={`px-4 py-3 rounded-xl cursor-pointer text-[0.95rem] text-slate-600 transition-all ${
+              className={`px-3 sm:px-4 py-2.5 sm:py-3 rounded-lg sm:rounded-xl cursor-pointer text-[0.85rem] sm:text-[0.95rem] text-slate-600 transition-all ${
                 idx === activeIndex ? 'bg-emerald-500/8 text-emerald-800' : 'hover:bg-emerald-500/8 hover:text-emerald-800'
               }`}
               onClick={() => selectSuggestion(suggestion)}

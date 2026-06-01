@@ -201,21 +201,21 @@ const JourneyMap = ({ path }) => {
   const modesInPath = [...new Set((path || []).map(s => s.mode || 'bus'))];
 
   return (
-    <div className="w-full relative overflow-hidden bg-white/80 border border-slate-200/80 rounded-3xl p-3 shadow-sm hover:shadow-md transition-all duration-300 animate-slide-in mb-4">
-      <div className="flex justify-between items-center px-3 pb-2.5">
-        <h3 className="font-display font-semibold text-base text-slate-700 flex items-center gap-2 m-0">
-          <svg className="text-emerald-500" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+    <div className="w-full relative overflow-hidden bg-white/80 border border-slate-200/80 rounded-2xl sm:rounded-3xl p-2 sm:p-3 shadow-sm hover:shadow-md transition-all duration-300 animate-slide-in mb-3 sm:mb-4">
+      <div className="flex justify-between items-center px-2 sm:px-3 pb-2 sm:pb-2.5">
+        <h3 className="font-display font-semibold text-sm sm:text-base text-slate-700 flex items-center gap-1.5 sm:gap-2 m-0">
+          <svg className="text-emerald-500" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
             <polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6" />
             <line x1="8" y1="2" x2="8" y2="18" />
             <line x1="16" y1="6" x2="16" y2="22" />
           </svg>
           Journey Route Map
         </h3>
-        <span className="text-[0.75rem] font-sans font-medium text-slate-400 bg-slate-50 border border-slate-200/60 px-2 py-0.5 rounded-full">
-          {loadingGeocodes ? 'Geocoding...' : 'Interactive Zoom'}
+        <span className="text-[0.68rem] sm:text-[0.75rem] font-sans font-medium text-slate-400 bg-slate-50 border border-slate-200/60 px-1.5 sm:px-2 py-0.5 rounded-full">
+          {loadingGeocodes ? 'Geocoding...' : 'Interactive'}
         </span>
       </div>
-      <div className="relative w-full h-[320px]">
+      <div className="relative w-full h-[220px] sm:h-[280px] md:h-[320px]">
         <div
           ref={mapContainerRef}
           className="w-full h-full rounded-2xl border border-slate-100 z-10"

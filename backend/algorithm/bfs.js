@@ -53,7 +53,7 @@ function findJourney(source, destination, routes) {
                 path.push({ bus: r1.routeNumber, mode: r1.mode, stop: r1.stops[k] });
             }
             if (hasDuplicates(path)) continue;
-            
+
             const key = serializePath(path);
             if (!addedDirect.has(key)) {
                 addedDirect.add(key);
@@ -63,12 +63,12 @@ function findJourney(source, destination, routes) {
         }
     }
 
-    // 3. Find One-Change Journeys (1 Transfer)
+    // 3.  One-Change Journeys (1 Transfer)
     for (const r1 of sourceRoutes) {
         const sIdx = r1.stops.indexOf(source);
         if (sIdx === -1) continue;
 
-        // Iterate through stops on r1 after the source stop
+        // loop through stops on r1 after the source stop
         for (let i = sIdx + 1; i < r1.stops.length; i++) {
             const t1 = r1.stops[i];
             if (t1 === source || t1 === destination) continue;
@@ -82,12 +82,12 @@ function findJourney(source, destination, routes) {
 
                 if (t1Idx !== -1 && dIdx !== -1 && t1Idx < dIdx) {
                     const path = [];
-                    // Add all stops for first leg (source -> t1)
+                    // Append all stops for first leg (source -> t1)
                     const t1IdxInR1 = r1.stops.indexOf(t1);
                     for (let k = sIdx; k <= t1IdxInR1; k++) {
                         path.push({ bus: r1.routeNumber, mode: r1.mode, stop: r1.stops[k] });
                     }
-                    // Add all stops for second leg (t1 -> destination)
+                    // Append all stops for second leg (t1 -> destination)
                     for (let k = t1Idx; k <= dIdx; k++) {
                         path.push({ bus: r2.routeNumber, mode: r2.mode, stop: r2.stops[k] });
                     }

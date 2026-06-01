@@ -215,14 +215,14 @@ function App() {
   );
 
   return (
-    <div className="w-full max-w-4xl mx-auto px-4 py-8 flex flex-col gap-6">
+    <div className="w-full max-w-2xl mx-auto px-3 sm:px-4 md:px-6 py-4 sm:py-6 md:py-8 flex flex-col gap-4 sm:gap-6">
       <Header />
 
       <form
         onSubmit={handleSearch}
-        className="bg-white/85 border border-slate-200/80 rounded-3xl shadow-md hover:shadow-lg transition-all duration-300 p-6 sm:p-8 flex flex-col gap-6"
+        className="bg-white/85 border border-slate-200/80 rounded-2xl sm:rounded-3xl shadow-md hover:shadow-lg transition-all duration-300 p-4 sm:p-6 md:p-8 flex flex-col gap-4 sm:gap-6"
       >
-        <div className="flex flex-col md:flex-row items-center gap-4 relative">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4 relative">
           <StopInput
             label="From"
             value={fromStop}
@@ -233,11 +233,12 @@ function App() {
           />
           <button
             type="button"
-            className="w-12 h-12 bg-slate-50 border border-slate-200 text-slate-500 rounded-xl cursor-pointer flex items-center justify-center hover:bg-slate-100 hover:border-emerald-500 hover:text-emerald-600 hover:scale-105 active:scale-95 transition-all duration-300 md:rotate-0 rotate-90 shrink-0"
+            className="w-full sm:w-12 h-10 sm:h-12 bg-slate-50 border border-slate-200 text-slate-500 rounded-xl cursor-pointer flex items-center justify-center gap-2 sm:gap-0 hover:bg-slate-100 hover:border-emerald-500 hover:text-emerald-600 hover:scale-105 active:scale-95 transition-all duration-300 shrink-0 sm:rotate-0"
             onClick={handleSwap}
             title="Swap stops"
           >
             {swapIcon}
+            <span className="sm:hidden text-sm font-medium">Swap</span>
           </button>
           <StopInput
             label="To"
@@ -251,7 +252,7 @@ function App() {
 
         <button
           type="submit"
-          className="w-full py-4 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-600 border-none text-white font-display font-semibold text-lg cursor-pointer shadow-lg shadow-emerald-500/15 hover:shadow-emerald-500/30 hover:-translate-y-0.5 active:translate-y-0 transition-all duration-300 disabled:opacity-50"
+          className="w-full py-3 sm:py-4 rounded-xl sm:rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-600 border-none text-white font-display font-semibold text-base sm:text-lg cursor-pointer shadow-lg shadow-emerald-500/15 hover:shadow-emerald-500/30 hover:-translate-y-0.5 active:translate-y-0 transition-all duration-300 disabled:opacity-50"
           disabled={loading}
         >
           {loading ? "Finding Best Routes..." : "Find Routes"}
@@ -259,7 +260,7 @@ function App() {
       </form>
 
       {error && (
-        <div className="px-6 py-4 rounded-2xl bg-red-500/10 border border-red-500/25 text-red-700 text-left font-sans">
+        <div className="px-4 sm:px-6 py-3 sm:py-4 rounded-xl sm:rounded-2xl bg-red-500/10 border border-red-500/25 text-red-700 text-sm sm:text-base text-left font-sans">
           {error}
         </div>
       )}
@@ -267,7 +268,7 @@ function App() {
       {loading && <LoadingSkeleton />}
 
       {results && !loading && (
-        <div className="flex flex-col gap-5">
+        <div className="flex flex-col gap-3 sm:gap-5">
           <BestOptionBanner
             bestOption={results.bestOption}
             fromStop={fromStop}

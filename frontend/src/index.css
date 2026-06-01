@@ -26,5 +26,17 @@ body {
   margin: 0;
   padding: 0;
   min-height: 100vh;
+  min-height: 100dvh; /* dynamic viewport height — correct on mobile browsers */
   background: radial-gradient(circle at top right, #f0fdf4, #f8fafc 80%);
+  /* Safe area insets for notched phones */
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* Hide scrollbar cross-browser while keeping scroll behaviour */
+.scrollbar-none {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
 }
